@@ -3,7 +3,7 @@ from datetime import datetime
 import streamlit as st
 import json
 import os
-import openai  # Import the openai module
+import openai  # Ensure openai is imported
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
@@ -18,15 +18,6 @@ if openai_api_key is None:
     st.error("OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.")
 else:
     openai.api_key = openai_api_key
-    try:
-        response = openai.Completion.create(
-            engine="davinci",
-            prompt="Say hello!",
-            max_tokens=5
-        )
-        print("API Key works correctly:", response.choices[0].text.strip())
-    except Exception as e:
-        print("Error with API Key:", e)
 
     # Load knowledge base with error handling
     def load_knowledge_base():
@@ -67,8 +58,14 @@ else:
             if answer == "Sorry, I don't have an answer for that.":
                 # If no answer in knowledge base, use OpenAI model
                 chatbot = ChatOpenAI(model=model, api_key=openai_api_key)
-                response = chatbot(prompt)
-                answer = response.choices[0].text.strip()
+                response = openai.ChatCompletion.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                answer = response.choices[0].message['content'].strip()
 
             st.session_state.messages.append(AIMessage(content=answer))
 
