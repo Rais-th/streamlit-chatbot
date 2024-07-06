@@ -3,6 +3,7 @@ from datetime import datetime
 import streamlit as st
 import json
 import os
+import openai  # Import the openai module
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
@@ -16,10 +17,25 @@ openai_api_key = os.getenv('OPENAI_API_KEY')
 if openai_api_key is None:
     st.error("OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.")
 else:
-    # Load knowledge base
+    openai.api_key = openai_api_key
+    try:
+        response = openai.Completion.create(
+            engine="davinci",
+            prompt="Say hello!",
+            max_tokens=5
+        )
+        print("API Key works correctly:", response.choices[0].text.strip())
+    except Exception as e:
+        print("Error with API Key:", e)
+
+    # Load knowledge base with error handling
     def load_knowledge_base():
-        with open('transport_data.json', 'r') as f:
-            return json.load(f)
+        try:
+            with open('transport_data.json', 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            st.error(f"Error loading knowledge base: {e}")
+            return []
 
     knowledge_base = load_knowledge_base()
 
@@ -27,7 +43,7 @@ else:
         for entry in knowledge_base:
             if question.lower() in entry['question'].lower():
                 return entry['answer']
-        return None
+        return "Sorry, I don't have an answer for that."
 
     def main():
         st.title("Streamlit Chatbot")
@@ -48,7 +64,7 @@ else:
 
             # First check the knowledge base
             answer = get_answer(prompt)
-            if answer is None:
+            if answer == "Sorry, I don't have an answer for that.":
                 # If no answer in knowledge base, use OpenAI model
                 chatbot = ChatOpenAI(model=model, api_key=openai_api_key)
                 response = chatbot(prompt)
